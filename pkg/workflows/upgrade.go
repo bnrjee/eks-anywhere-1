@@ -289,6 +289,12 @@ func (s *updateClusterAndGitResources) Run(ctx context.Context, commandContext *
 		commandContext.SetError(err)
 		return nil
 	}
+	err = commandContext.Provider.ApplyWorkerNodeGroupTaints(ctx, commandContext.ClusterSpec, commandContext.WorkloadCluster)
+	if err != nil {
+		commandContext.SetError(err)
+		return nil
+	}
+
 	return &resumeFluxReconcile{}
 }
 

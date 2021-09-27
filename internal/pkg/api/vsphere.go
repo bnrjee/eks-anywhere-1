@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
 	"github.com/aws/eks-anywhere/pkg/templater"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type VSphereConfig struct {
@@ -117,6 +118,18 @@ func WithNumCPUs(value int) VSphereFiller {
 		if config.etcdMachineConfig != nil {
 			config.etcdMachineConfig.Spec.NumCPUs = value
 		}
+	}
+}
+
+func WithCPTaints(value []corev1.Taint) VSphereFiller {
+	return func(config VSphereConfig) {
+		config.cpMachineConfig.Spec.Taints = value
+	}
+}
+
+func WithWorkerTaints(value []corev1.Taint) VSphereFiller {
+	return func(config VSphereConfig) {
+		config.workerMachineConfig.Spec.Taints = value
 	}
 }
 

@@ -407,3 +407,7 @@ func (p *provider) MachineConfigs() []providers.MachineConfig {
 func (p *provider) ValidateNewSpec(_ context.Context, _ *types.Cluster, _ *cluster.Spec) error {
 	return nil
 }
+
+func (p *provider) ApplyWorkerNodeGroupTaints(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error{
+	return nil
+}

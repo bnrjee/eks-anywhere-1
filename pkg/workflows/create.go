@@ -272,6 +272,13 @@ func (s *InstallAddonManagerTask) Run(ctx context.Context, commandContext *task.
 		logger.MarkFail("Error when installing GitOps toolkits on workload cluster; EKS-A will continue with cluster creation, but GitOps will not be enabled", "error", err)
 		return &WriteClusterConfigTask{}
 	}
+
+	err = commandContext.Provider.ApplyWorkerNodeGroupTaints(ctx, commandContext.ClusterSpec, commandContext.WorkloadCluster)
+	if err != nil {
+		commandContext.SetError(err)
+		return nil
+	}
+
 	return &WriteClusterConfigTask{}
 }
 

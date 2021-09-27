@@ -281,6 +281,11 @@ spec:
         kubeletExtraArgs:
           cloud-provider: external
         name: '{{`{{ ds.meta_data.hostname }}`}}'
+{{- if .controlPlaneVMsTaints }}
+        taints: {{ range .controlPlaneVMsTaints}}
+          - {{ . }}
+        {{- end }}
+{{- end }}
     joinConfiguration:
 {{- if (eq .format "bottlerocket") }}
       pause:
@@ -302,6 +307,11 @@ spec:
         kubeletExtraArgs:
           cloud-provider: external
         name: '{{`{{ ds.meta_data.hostname }}`}}'
+{{- if .controlPlaneVMsTaints }}
+        taints: {{ range .controlPlaneVMsTaints}}
+          - {{ . }}
+        {{- end }}
+{{- end }}
     preKubeadmCommands:
 {{- if and .registryMirrorConfiguration (ne .format "bottlerocket") }}
     - cat /etc/containerd/config_append.toml >> /etc/containerd/config.toml

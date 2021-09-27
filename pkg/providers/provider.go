@@ -32,6 +32,7 @@ type Provider interface {
 	MachineConfigs() []MachineConfig
 	ValidateNewSpec(ctx context.Context, cluster *types.Cluster, clusterSpec *cluster.Spec) error
 	GenerateMHC() ([]byte, error)
+	ApplyWorkerNodeGroupTaints(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error
 }
 
 type DatacenterConfig interface {

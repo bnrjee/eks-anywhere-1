@@ -131,6 +131,8 @@ type ProviderKubectlClient interface {
 	GetEtcdadmCluster(ctx context.Context, cluster *types.Cluster, opts ...executables.KubectlOpt) (*etcdv1alpha3.EtcdadmCluster, error)
 	GetSecret(ctx context.Context, secretObjectName string, opts ...executables.KubectlOpt) (*corev1.Secret, error)
 	UpdateAnnotation(ctx context.Context, resourceType, objectName string, annotations map[string]string, opts ...executables.KubectlOpt) error
+	ApplyTaint(ctx context.Context, kubeconfig string, node string, taint corev1.Taint) error
+	GetWorkerNodes(ctx context.Context, kubeconfig string) ([]string, error)
 }
 
 func NewProvider(datacenterConfig *v1alpha1.VSphereDatacenterConfig, machineConfigs map[string]*v1alpha1.VSphereMachineConfig, clusterConfig *v1alpha1.Cluster, providerGovcClient ProviderGovcClient, providerKubectlClient ProviderKubectlClient, writer filewriter.FileWriter, now types.NowFunc, skipIpCheck bool) *vsphereProvider {
@@ -1072,6 +1074,19 @@ func buildTemplateMapCP(clusterSpec *cluster.Spec, datacenterSpec v1alpha1.VSphe
 		"auditPolicy":                          common.GetAuditPolicy(),
 	}
 
+	if controlPlaneMachineSpec.Taints != nil {
+		var taints []string
+		for _, taint := range controlPlaneMachineSpec.Taints {
+			taintString :=fmt.Sprintf("key: %s\n            value: %s\n            effect: %s",
+				taint.Key,
+				taint.Value,
+				taint.Effect)
+			taints = append(taints, taintString)
+		}
+		values["controlPlaneVMsTaints"] = taints
+
+	}
+
 	if clusterSpec.Spec.RegistryMirrorConfiguration != nil {
 		values["registryMirrorConfiguration"] = clusterSpec.Spec.RegistryMirrorConfiguration.Endpoint
 		if len(clusterSpec.Spec.RegistryMirrorConfiguration.CACertContent) > 0 {
@@ -1541,4 +1556,34 @@ func (p *vsphereProvider) secretContentsChanged(ctx context.Context, workloadClu
 		return true, nil
 	}
 	return false, nil
+}
+
+func (p *vsphereProvider) ApplyWorkerNodeGroupTaints(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error{
+	cc, err := p.providerKubectlClient.GetEksaCluster(ctx, cluster)
+	if err != nil {
+		return err
+	}
+	nodes, err := p.providerKubectlClient.GetWorkerNodes(ctx, cluster.KubeconfigFile)
+	if err != nil {
+		return err
+	}
+	workerMachineConfig, err := p.providerKubectlClient.GetEksaVSphereMachineConfig(ctx,
+		cc.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef.Name,
+		cluster.KubeconfigFile, clusterSpec.Namespace)
+	if err != nil {
+		return err
+	}
+	taints := workerMachineConfig.Spec.Taints
+	if taints == nil {
+		return nil
+	}
+	for _, node := range nodes{
+		for _, taint := range taints{
+			err = p.providerKubectlClient.ApplyTaint(ctx, cluster.KubeconfigFile, node, taint)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
