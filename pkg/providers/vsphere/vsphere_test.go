@@ -390,6 +390,12 @@ func TestProviderGenerateCAPISpecForUpgradeUpdateMachineTemplateExternalEtcd(t *
 			wantCPFile:        "testdata/expected_results_main_cp.yaml",
 			wantMDFile:        "testdata/expected_results_main_md.yaml",
 		},
+		{
+			testName:          "main_with_taints",
+			clusterconfigFile: "cluster_main_with_taints.yaml",
+			wantCPFile:        "testdata/expected_results_main_with_taints_cp.yaml",
+			wantMDFile:        "testdata/expected_results_main_md.yaml",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {

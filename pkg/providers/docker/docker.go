@@ -11,6 +11,7 @@ import (
 	etcdv1alpha3 "github.com/mrajashree/etcdadm-controller/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/api/v1alpha3"
 	kubeadmnv1alpha3 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1alpha3"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
 	"github.com/aws/eks-anywhere/pkg/bootstrapper"
@@ -188,6 +189,16 @@ func buildTemplateMapCP(clusterSpec *cluster.Spec) map[string]interface{} {
 		values["externalEtcd"] = true
 		values["externalEtcdReplicas"] = clusterSpec.Spec.ExternalEtcdConfiguration.Count
 	}
+
+	if clusterSpec.Spec.ControlPlaneConfiguration.Taints != nil {
+		var taints []corev1.Taint
+		for _, taint := range clusterSpec.Spec.ControlPlaneConfiguration.Taints {
+			fmt.Printf("%+v\n", taint)
+			taints = append(taints, taint)
+		}
+		values["controlPlaneTaints"] = taints
+	}
+
 	return values
 }
 
