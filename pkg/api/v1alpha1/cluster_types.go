@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,6 +71,7 @@ type ControlPlaneConfiguration struct {
 	Endpoint *Endpoint `json:"endpoint,omitempty"`
 	// MachineGroupRef defines the machine group configuration for the control plane.
 	MachineGroupRef *Ref `json:"machineGroupRef,omitempty"`
+	Taints            []corev1.Taint      `json:"taints,omitempty"`
 }
 
 type Endpoint struct {
@@ -92,6 +94,7 @@ type WorkerNodeGroupConfiguration struct {
 	Count int `json:"count,omitempty"`
 	// MachineGroupRef defines the machine group configuration for the worker nodes.
 	MachineGroupRef *Ref `json:"machineGroupRef,omitempty"`
+	Taints            []corev1.Taint      `json:"taints,omitempty"`
 }
 
 type ClusterNetwork struct {
