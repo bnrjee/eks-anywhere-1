@@ -255,6 +255,7 @@ func (s *InstallEksaComponentsTask) Run(ctx context.Context, commandContext *tas
 		commandContext.SetError(err)
 		return nil
 	}
+
 	return &InstallAddonManagerTask{}
 }
 
@@ -272,6 +273,14 @@ func (s *InstallAddonManagerTask) Run(ctx context.Context, commandContext *task.
 		logger.MarkFail("Error when installing GitOps toolkits on workload cluster; EKS-A will continue with cluster creation, but GitOps will not be enabled", "error", err)
 		return &WriteClusterConfigTask{}
 	}
+
+	logger.V(4).Info("Applying worker node taints on workload cluster if specified")
+	err = commandContext.ClusterManager.ApplyWorkerNodeGroupTaints(ctx, commandContext.WorkloadCluster, commandContext.ClusterSpec)
+	if err != nil {
+		commandContext.SetError(err)
+		return nil
+	}
+
 	return &WriteClusterConfigTask{}
 }
 

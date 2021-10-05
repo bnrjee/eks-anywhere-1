@@ -30,6 +30,7 @@ type ClusterManager interface {
 	ResumeEKSAControllerReconcile(ctx context.Context, cluster *types.Cluster, clusterSpec *cluster.Spec, provider providers.Provider) error
 	EKSAClusterSpecChanged(ctx context.Context, cluster *types.Cluster, clusterSpec *cluster.Spec, datacenterConfig providers.DatacenterConfig, machineConfigs []providers.MachineConfig) (bool, error)
 	InstallMachineHealthChecks(ctx context.Context, workloadCluster *types.Cluster, provider providers.Provider) error
+	ApplyWorkerNodeGroupTaints(ctx context.Context, workloadCluster *types.Cluster, clusterSpec *cluster.Spec) error
 }
 
 type AddonManager interface {

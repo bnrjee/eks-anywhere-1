@@ -289,6 +289,14 @@ func (s *updateClusterAndGitResources) Run(ctx context.Context, commandContext *
 		commandContext.SetError(err)
 		return nil
 	}
+
+       logger.V(4).Info("Applying worker node taints on workload cluster if specified")
+       err = commandContext.ClusterManager.ApplyWorkerNodeGroupTaints(ctx, commandContext.WorkloadCluster, commandContext.ClusterSpec)
+       if err != nil {
+               commandContext.SetError(err)
+               return nil
+       }
+
 	return &resumeFluxReconcile{}
 }
 

@@ -735,3 +735,41 @@ func (k *Kubectl) ValidateNodesVersion(ctx context.Context, kubeconfig string, k
 	}
 	return nil
 }
+
+func (k *Kubectl) ApplyTaint(ctx context.Context, kubeconfig string, node string, taints []corev1.Taint) error {
+	var taintStrings []string
+	for _, taint := range taints {
+		taintStrings = append(taintStrings, fmt.Sprintf("%s=%s:%s", taint.Key, taint.Value, taint.Effect))
+	}
+	params := []string{"taint", "nodes", node, "--kubeconfig", kubeconfig}
+	params = append(params, taintStrings...)
+	_, err := k.executable.Execute(ctx, params...)
+	return err
+}
+
+func (k *Kubectl) RemoveTaints(ctx context.Context, kubeconfig string, node string) error {
+	patch := "{\"spec\":{\"taints\":[]}}"
+	params := []string{"patch", "node", node, "--patch", patch, "--kubeconfig", kubeconfig}
+	_, err := k.executable.Execute(ctx, params...)
+	return err
+}
+
+func (k *Kubectl) GetWorkerNodes(ctx context.Context, kubeconfig string) ([]string, error) {
+	var workerNodes []string
+	template := "{{range .items}}{{.metadata.name}}\n{{end}}"
+	selector := "!node-role.kubernetes.io/master"
+	params := []string{"get", "nodes", "-o", "go-template", "--template", template,
+			"--selector", selector, "--kubeconfig", kubeconfig}
+	buffer, err := k.executable.Execute(ctx, params...)
+	if err != nil {
+		return workerNodes, err
+	}
+	scanner := bufio.NewScanner(strings.NewReader(buffer.String()))
+	for scanner.Scan() {
+		node := scanner.Text()
+		if len(node) != 0 {
+			workerNodes = append(workerNodes, node)
+		}
+	}
+	return workerNodes, err
+}

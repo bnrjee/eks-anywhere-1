@@ -1069,6 +1069,14 @@ func buildTemplateMapCP(clusterSpec *cluster.Spec, datacenterSpec v1alpha1.VSphe
 		"auditPolicy":                          common.GetAuditPolicy(),
 	}
 
+	if clusterSpec.Spec.ControlPlaneConfiguration.Taints != nil {
+		var taints []corev1.Taint
+		for _, taint := range clusterSpec.Spec.ControlPlaneConfiguration.Taints {
+			taints = append(taints, taint)
+		}
+		values["controlPlaneTaints"] = taints
+	}
+
 	if clusterSpec.Spec.RegistryMirrorConfiguration != nil {
 		values["registryMirrorConfiguration"] = clusterSpec.Spec.RegistryMirrorConfiguration.Endpoint
 		if len(clusterSpec.Spec.RegistryMirrorConfiguration.CACertContent) > 0 {

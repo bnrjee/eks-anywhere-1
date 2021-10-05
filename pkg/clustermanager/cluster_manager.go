@@ -10,6 +10,7 @@ import (
 	"time"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1alpha3"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
@@ -71,6 +72,9 @@ type ClusterClient interface {
 	GetNamespace(ctx context.Context, kubeconfig string, namespace string) error
 	ValidateControlPlaneNodes(ctx context.Context, cluster *types.Cluster) error
 	ValidateWorkerNodes(ctx context.Context, cluster *types.Cluster) error
+	ApplyTaint(ctx context.Context, kubeconfig string, node string, taints []corev1.Taint) error
+	RemoveTaints(ctx context.Context, kubeconfig string, node string) error
+	GetWorkerNodes(ctx context.Context, kubeconfig string) ([]string, error)
 }
 
 type Networking interface {
@@ -832,6 +836,28 @@ func (c *ClusterManager) applyResource(ctx context.Context, cluster *types.Clust
 	)
 	if err != nil {
 		return fmt.Errorf("error applying eks-a spec: %v", err)
+	}
+	return nil
+}
+
+func (c *ClusterManager) ApplyWorkerNodeGroupTaints(ctx context.Context, workloadCluster *types.Cluster, clusterSpec *cluster.Spec) error {
+	nodes, err := c.clusterClient.GetWorkerNodes(ctx, workloadCluster.KubeconfigFile)
+	if err != nil {
+		return err
+	}
+
+	taints := clusterSpec.Spec.WorkerNodeGroupConfigurations[0].Taints
+	fmt.Printf("nodes:%+v\n", nodes)
+	fmt.Printf("taints:%+v\n", taints)
+	for _, node := range nodes {
+		fmt.Printf("node:%+v\n", node)
+		c.clusterClient.RemoveTaints(ctx, workloadCluster.KubeconfigFile, node)
+		if taints != nil {
+			if err = c.clusterClient.ApplyTaint(ctx,
+				workloadCluster.KubeconfigFile, node, taints); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
