@@ -10,7 +10,7 @@ spec:
     pods:
       cidrBlocks: [192.168.0.0/16]
     services:
-      cidrBlocks: [10.96.0.0/16]
+      cidrBlocks: [10.96.0.0/12]
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
     kind: KubeadmControlPlane
@@ -79,7 +79,7 @@ spec:
       resourcePool: '*/Resources'
       server: vsphere_server
       storagePolicyName: "vSAN Default Storage Policy"
-      template: /SDDC-Datacenter/vm/Templates/bottlerocket-1804-kube-v1.19.6
+      template: /SDDC-Datacenter/vm/Templates/ubuntu-1804-kube-v1.19.6
       thumbprint: 'ABCDEFG'
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
@@ -98,19 +98,13 @@ spec:
       etcd:
         external:
           endpoints: []
-          caFile: "/var/lib/kubeadm/pki/etcd/ca.crt"
-          certFile: "/var/lib/kubeadm/pki/server-etcd-client.crt"
-          keyFile: "/var/lib/kubeadm/pki/apiserver-etcd-client.key"
+          caFile: "/etc/kubernetes/pki/etcd/ca.crt"
+          certFile: "/etc/kubernetes/pki/apiserver-etcd-client.crt"
+          keyFile: "/etc/kubernetes/pki/apiserver-etcd-client.key"
       dns:
         type: CoreDNS
         imageRepository: public.ecr.aws/eks-distro/coredns
         imageTag: v1.8.0-eks-1-19-4
-      pause:
-        imageRepository: public.ecr.aws/eks-distro/kubernetes/pause
-        imageTag: v1.19.8-eks-1-19-4
-      bottlerocketBootstrap:
-        imageRepository: public.ecr.aws/l0g8r8j6/bottlerocket-bootstrap
-        imageTag: v1-19-6-51a138f2cb28ccc98ced838ffc6ab984110123b
       apiServer:
         extraArgs:
           cloud-provider: external
@@ -120,15 +114,8 @@ spec:
           audit-log-maxbackup: "10"
           audit-log-maxsize: "512"
           profiling: "false"
-          oidc-client-id: my-client-id
-          oidc-groups-claim: claim1
-          oidc-groups-prefix: prefix-for-groups
-          oidc-issuer-url: https://mydomain.com/issuer
-          oidc-required-claim: sub=test
-          oidc-username-claim: username-claim
-          oidc-username-prefix: username-prefix1
         extraVolumes:
-        - hostPath: /var/lib/kubeadm/audit-policy.yaml
+        - hostPath: /etc/kubernetes/audit-policy.yaml
           mountPath: /etc/kubernetes/audit-policy.yaml
           name: audit-policy
           pathType: File
@@ -147,22 +134,9 @@ spec:
         extraArgs:
           cloud-provider: external
           profiling: "false"
-        extraVolumes:
-        - hostPath: /var/lib/kubeadm/controller-manager.conf
-          mountPath: /etc/kubernetes/controller-manager.conf
-          name: kubeconfig
-          pathType: File
-          readOnly: true
       scheduler:
         extraArgs:
           profiling: "false"
-        extraVolumes:
-        - hostPath: /var/lib/kubeadm/scheduler.conf
-          mountPath: /etc/kubernetes/scheduler.conf
-          name: kubeconfig
-          pathType: File
-          readOnly: true
-      certificatesDir: /var/lib/kubeadm/pki
     files:
     - content: |
         apiVersion: v1
@@ -375,20 +349,32 @@ spec:
         kubeletExtraArgs:
           cloud-provider: external
         name: '{{ ds.meta_data.hostname }}'
-        taints:
+        taints: 
+          - key: key1
+            value: val1
+            effect: PreferNoSchedule
+          - key: key2
+            value: val2
+            effect: NoSchedule
+          - key: key3
+            value: val3
+            effect: NoExecute
     joinConfiguration:
-      pause:
-        imageRepository: public.ecr.aws/eks-distro/kubernetes/pause
-        imageTag: v1.19.8-eks-1-19-4
-      bottlerocketBootstrap:
-        imageRepository: public.ecr.aws/l0g8r8j6/bottlerocket-bootstrap
-        imageTag: v1-19-6-51a138f2cb28ccc98ced838ffc6ab984110123b
       nodeRegistration:
         criSocket: /var/run/containerd/containerd.sock
         kubeletExtraArgs:
           cloud-provider: external
         name: '{{ ds.meta_data.hostname }}'
-        taints:
+        taints: 
+          - key: key1
+            value: val1
+            effect: PreferNoSchedule
+          - key: key2
+            value: val2
+            effect: NoSchedule
+          - key: key3
+            value: val3
+            effect: NoExecute
     preKubeadmCommands:
     - hostname "{{ ds.meta_data.hostname }}"
     - echo "::1         ipv6-localhost ipv6-loopback" >/etc/hosts
@@ -397,11 +383,11 @@ spec:
     - echo "{{ ds.meta_data.hostname }}" >/etc/hostname
     useExperimentalRetryJoin: true
     users:
-    - name: ec2-user
+    - name: capv
       sshAuthorizedKeys:
       - 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC1BK73XhIzjX+meUr7pIYh6RHbvI3tmHeQIXY5lv7aztN1UoX+bhPo3dwo2sfSQn5kuxgQdnxIZ/CTzy0p0GkEYVv3gwspCeurjmu0XmrdmaSGcGxCEWT/65NtvYrQtUE5ELxJ+N/aeZNlK2B7IWANnw/82913asXH4VksV1NYNduP0o1/G4XcwLLSyVFB078q/oEnmvdNIoS61j4/o36HVtENJgYr0idcBvwJdvcGxGnPaqOhx477t+kfJAa5n5dSA5wilIaoXH5i1Tf/HsTCM52L+iNCARvQzJYZhzbWI1MDQwzILtIBEQCJsl2XSqIupleY8CxqQ6jCXt2mhae+wPc3YmbO5rFvr2/EvC57kh3yDs1Nsuj8KOvD78KeeujbR8n8pScm3WDp62HFQ8lEKNdeRNj6kB8WnuaJvPnyZfvzOhwG65/9w13IBl7B1sWxbFnq2rMpm5uHVK7mAmjL0Tt8zoDhcE1YJEnp9xte3/pvmKPkST5Q/9ZtR9P5sI+02jY0fvPkPyC03j2gsPixG7rpOCwpOdbny4dcj0TDeeXJX8er+oVfJuLYz0pNWJcT2raDdFfcqvYA0B0IyNYlj5nWX4RuEcyT3qocLReWPnZojetvAG/H8XwOh7fEVGqHAKOVSnPXCSQJPl6s0H12jPJBDJMTydtYPEszl4/CeQ=='
       sudo: ALL=(ALL) NOPASSWD:ALL
-    format: bottlerocket
+    format: cloud-config
   replicas: 3
   version: v1.19.8-eks-1-19-4
 ---
@@ -441,13 +427,18 @@ spec:
   replicas: 3
   etcdadmConfigSpec:
     etcdadmBuiltin: true
-    format: bottlerocket
-    bottlerocketConfig:
-      etcdImage: public.ecr.aws/eks-distro/etcd-io/etcd:v3.4.14-eks-1-19-4
-      bootstrapImage: public.ecr.aws/l0g8r8j6/bottlerocket-bootstrap:v1-19-6-51a138f2cb28ccc98ced838ffc6ab984110123b
-      pauseImage: public.ecr.aws/eks-distro/kubernetes/pause:v1.19.8-eks-1-19-4
+    format: cloud-config
+    cloudInitConfig:
+      version: 3.4.14
+      installDir: "/usr/bin"
+    preEtcdadmCommands:
+      - hostname "{{ ds.meta_data.hostname }}"
+      - echo "::1         ipv6-localhost ipv6-loopback" >/etc/hosts
+      - echo "127.0.0.1   localhost" >>/etc/hosts
+      - echo "127.0.0.1   {{ ds.meta_data.hostname }}" >>/etc/hosts
+      - echo "{{ ds.meta_data.hostname }}" >/etc/hostname
     users:
-      - name: ec2-user
+      - name: capv
         sshAuthorizedKeys:
           - 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC1BK73XhIzjX+meUr7pIYh6RHbvI3tmHeQIXY5lv7aztN1UoX+bhPo3dwo2sfSQn5kuxgQdnxIZ/CTzy0p0GkEYVv3gwspCeurjmu0XmrdmaSGcGxCEWT/65NtvYrQtUE5ELxJ+N/aeZNlK2B7IWANnw/82913asXH4VksV1NYNduP0o1/G4XcwLLSyVFB078q/oEnmvdNIoS61j4/o36HVtENJgYr0idcBvwJdvcGxGnPaqOhx477t+kfJAa5n5dSA5wilIaoXH5i1Tf/HsTCM52L+iNCARvQzJYZhzbWI1MDQwzILtIBEQCJsl2XSqIupleY8CxqQ6jCXt2mhae+wPc3YmbO5rFvr2/EvC57kh3yDs1Nsuj8KOvD78KeeujbR8n8pScm3WDp62HFQ8lEKNdeRNj6kB8WnuaJvPnyZfvzOhwG65/9w13IBl7B1sWxbFnq2rMpm5uHVK7mAmjL0Tt8zoDhcE1YJEnp9xte3/pvmKPkST5Q/9ZtR9P5sI+02jY0fvPkPyC03j2gsPixG7rpOCwpOdbny4dcj0TDeeXJX8er+oVfJuLYz0pNWJcT2raDdFfcqvYA0B0IyNYlj5nWX4RuEcyT3qocLReWPnZojetvAG/H8XwOh7fEVGqHAKOVSnPXCSQJPl6s0H12jPJBDJMTydtYPEszl4/CeQ=='
         sudo: ALL=(ALL) NOPASSWD:ALL
@@ -474,11 +465,11 @@ spec:
         devices:
           - dhcp4: true
             networkName: /SDDC-Datacenter/network/sddc-cgw-network-1
-      numCPUs: 2
+      numCPUs: 3
       resourcePool: '*/Resources'
       server: vsphere_server
       storagePolicyName: "vSAN Default Storage Policy"
-      template: /SDDC-Datacenter/vm/Templates/bottlerocket-1804-kube-v1.19.6
+      template: /SDDC-Datacenter/vm/Templates/ubuntu-1804-kube-v1.19.6
       thumbprint: 'ABCDEFG'
 ---
 apiVersion: v1

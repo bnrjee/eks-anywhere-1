@@ -9,6 +9,7 @@ import (
 	"time"
 
 	etcdv1alpha3 "github.com/mrajashree/etcdadm-controller/api/v1alpha3"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-api/api/v1alpha3"
 	kubeadmnv1alpha3 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1alpha3"
 
@@ -187,6 +188,13 @@ func buildTemplateMapCP(clusterSpec *cluster.Spec) map[string]interface{} {
 		values["externalEtcd"] = true
 		values["externalEtcdReplicas"] = clusterSpec.Spec.ExternalEtcdConfiguration.Count
 	}
+
+	if clusterSpec.Spec.ControlPlaneConfiguration.Taints != nil {
+		var taints []corev1.Taint
+		taints = append(taints, clusterSpec.Spec.ControlPlaneConfiguration.Taints...)
+		values["controlPlaneTaints"] = taints
+	}
+
 	return values
 }
 
