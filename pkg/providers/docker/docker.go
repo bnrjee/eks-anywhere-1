@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	etcdv1alpha3 "github.com/mrajashree/etcdadm-controller/api/v1alpha3"
 	"sigs.k8s.io/cluster-api/api/v1alpha3"
 	kubeadmnv1alpha3 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1alpha3"
@@ -18,6 +19,7 @@ import (
 	"github.com/aws/eks-anywhere/pkg/clusterapi"
 	"github.com/aws/eks-anywhere/pkg/constants"
 	"github.com/aws/eks-anywhere/pkg/executables"
+	"github.com/aws/eks-anywhere/pkg/features"
 	"github.com/aws/eks-anywhere/pkg/logger"
 	"github.com/aws/eks-anywhere/pkg/providers"
 	"github.com/aws/eks-anywhere/pkg/providers/common"
@@ -190,6 +192,21 @@ func buildTemplateMapCP(clusterSpec *cluster.Spec) map[string]interface{} {
 	if clusterSpec.AWSIamConfig != nil {
 		values["awsIamAuth"] = true
 	}
+
+	if features.IsActive(features.TaintsSupport()) {
+		var taints []corev1.Taint
+		if len(clusterSpec.Spec.ControlPlaneConfiguration.Taints) > 0 {
+			for _, taint := range clusterSpec.Spec.ControlPlaneConfiguration.Taints {
+				if taint.Effect != "NoExecute" {
+					taints = append(taints, taint)
+				}
+			}
+		}
+		if len(taints) > 0 {
+			values["controlPlaneTaints"] = taints
+		}
+	}
+
 	return values
 }
 
@@ -420,4 +437,8 @@ func (p *provider) ChangeDiff(currentSpec, newSpec *cluster.Spec) *types.Compone
 		NewVersion:    newSpec.VersionsBundle.Docker.Version,
 		OldVersion:    currentSpec.VersionsBundle.Docker.Version,
 	}
+}
+
+func (p *provider) ApplyCloudControllerTolerations(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error {
+	return nil
 }

@@ -33,6 +33,7 @@ type Provider interface {
 	ValidateNewSpec(ctx context.Context, cluster *types.Cluster, clusterSpec *cluster.Spec) error
 	GenerateMHC() ([]byte, error)
 	ChangeDiff(currentSpec, newSpec *cluster.Spec) *types.ComponentChangeDiff
+	ApplyCloudControllerTolerations(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error
 }
 
 type DatacenterConfig interface {

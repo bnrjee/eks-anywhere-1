@@ -7,6 +7,7 @@ import (
 const (
 	ComponentsUpgradesEnvVar  = "COMPONENTS_UPGRADE"
 	AwsIamAuthenticatorEnvVar = "AWS_IAM_AUTHENTICATOR"
+	TaintsSupportEnvVar      = "TAINTS_SUPPORT"
 )
 
 var cache = newMutexMap()
@@ -43,5 +44,12 @@ func AwsIamAuthenticator() Feature {
 	return Feature{
 		Name:     "aws-iam-authenticator identity provider",
 		IsActive: isActiveForEnvVar(AwsIamAuthenticatorEnvVar),
+	}
+}
+
+func TaintsSupport() Feature {
+	return Feature{
+		Name:     "Taints support",
+		IsActive: isActiveForEnvVar(TaintsSupportEnvVar),
 	}
 }

@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"strconv"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -135,6 +136,8 @@ type ControlPlaneConfiguration struct {
 	Endpoint *Endpoint `json:"endpoint,omitempty"`
 	// MachineGroupRef defines the machine group configuration for the control plane.
 	MachineGroupRef *Ref `json:"machineGroupRef,omitempty"`
+	// Taints define the set of taints to be applied on control plane nodes
+	Taints          []corev1.Taint `json:"taints,omitempty"`
 }
 
 func (n *ControlPlaneConfiguration) Equal(o *ControlPlaneConfiguration) bool {
@@ -167,6 +170,8 @@ type WorkerNodeGroupConfiguration struct {
 	Count int `json:"count,omitempty"`
 	// MachineGroupRef defines the machine group configuration for the worker nodes.
 	MachineGroupRef *Ref `json:"machineGroupRef,omitempty"`
+	// Taints define the set of taints to be applied on worker nodes
+	Taints          []corev1.Taint `json:"taints,omitempty"`
 }
 
 func generateWorkerNodeGroupKey(c WorkerNodeGroupConfiguration) (key string) {

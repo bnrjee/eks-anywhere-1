@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/eks-anywhere/pkg/api/v1alpha1"
 	"github.com/aws/eks-anywhere/pkg/cluster"
+	"github.com/aws/eks-anywhere/pkg/features"
 	"github.com/aws/eks-anywhere/pkg/clustermanager/internal"
 	"github.com/aws/eks-anywhere/pkg/clustermarshaller"
 	"github.com/aws/eks-anywhere/pkg/constants"
@@ -204,12 +205,6 @@ func (c *ClusterManager) CreateWorkloadCluster(ctx context.Context, managementCl
 		// the condition external etcd ready if true indicates that all etcd machines are ready and the etcd cluster is ready to accept requests
 	}
 
-	logger.V(3).Info("Waiting for control plane to be ready")
-	err = c.clusterClient.WaitForControlPlaneReady(ctx, managementCluster, ctrlPlaneWaitStr, workloadCluster.Name)
-	if err != nil {
-		return nil, fmt.Errorf("error waiting for workload cluster control plane to be ready: %v", err)
-	}
-
 	err = c.Retrier.Retry(
 		func() error {
 			workloadCluster.KubeconfigFile, err = c.generateWorkloadKubeconfig(ctx, workloadCluster.Name, managementCluster, provider)
@@ -219,6 +214,24 @@ func (c *ClusterManager) CreateWorkloadCluster(ctx context.Context, managementCl
 
 	if err != nil {
 		return nil, fmt.Errorf("error generating workload kubeconfig: %v", err)
+	}
+
+	if features.IsActive(features.TaintsSupport()) {
+		err = c.Retrier.Retry(
+			func() error {
+				err = provider.ApplyCloudControllerTolerations(ctx, clusterSpec, workloadCluster)
+				return err
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error apply cloud controller tolerations: %v", err)
+		}
+	}
+
+	logger.V(3).Info("Waiting for control plane to be ready")
+	err = c.clusterClient.WaitForControlPlaneReady(ctx, managementCluster, ctrlPlaneWaitStr, workloadCluster.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error waiting for workload cluster control plane to be ready: %v", err)
 	}
 
 	logger.V(3).Info("Waiting for controlplane and worker machines to be ready")
@@ -287,6 +300,18 @@ func (c *ClusterManager) UpgradeCluster(ctx context.Context, managementCluster, 
 		}
 		externalEtcdTopology = true
 		logger.V(3).Info("External etcd is ready")
+	}
+
+	if features.IsActive(features.TaintsSupport()) {
+		err = c.Retrier.Retry(
+			func() error {
+				err = provider.ApplyCloudControllerTolerations(ctx, clusterSpec, workloadCluster)
+				return err
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("error apply cloud controller tolerations: %v", err)
+		}
 	}
 
 	logger.V(3).Info("Waiting for control plane to be ready")

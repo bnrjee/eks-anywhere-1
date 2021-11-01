@@ -28,6 +28,7 @@ import (
 	"github.com/aws/eks-anywhere/pkg/constants"
 	"github.com/aws/eks-anywhere/pkg/crypto"
 	"github.com/aws/eks-anywhere/pkg/executables"
+	"github.com/aws/eks-anywhere/pkg/features"
 	"github.com/aws/eks-anywhere/pkg/filewriter"
 	"github.com/aws/eks-anywhere/pkg/logger"
 	"github.com/aws/eks-anywhere/pkg/networkutils"
@@ -137,6 +138,7 @@ type ProviderKubectlClient interface {
 	GetEtcdadmCluster(ctx context.Context, cluster *types.Cluster, opts ...executables.KubectlOpt) (*etcdv1alpha3.EtcdadmCluster, error)
 	GetSecret(ctx context.Context, secretObjectName string, opts ...executables.KubectlOpt) (*corev1.Secret, error)
 	UpdateAnnotation(ctx context.Context, resourceType, objectName string, annotations map[string]string, opts ...executables.KubectlOpt) error
+	PatchTolerations(ctx context.Context, taints []corev1.Taint, resource string, name string, kubeconfigFile string, namespace string) error
 }
 
 func NewProvider(datacenterConfig *v1alpha1.VSphereDatacenterConfig, machineConfigs map[string]*v1alpha1.VSphereMachineConfig, clusterConfig *v1alpha1.Cluster, providerGovcClient ProviderGovcClient, providerKubectlClient ProviderKubectlClient, writer filewriter.FileWriter, now types.NowFunc, skipIpCheck bool) *vsphereProvider {
@@ -1077,6 +1079,19 @@ func buildTemplateMapCP(clusterSpec *cluster.Spec, datacenterSpec v1alpha1.VSphe
 		"eksaSystemNamespace":                  constants.EksaSystemNamespace,
 		"auditPolicy":                          common.GetAuditPolicy(),
 	}
+	if features.IsActive(features.TaintsSupport()) {
+		var taints []corev1.Taint
+		if len(clusterSpec.Spec.ControlPlaneConfiguration.Taints) > 0 {
+			for _, taint := range clusterSpec.Spec.ControlPlaneConfiguration.Taints {
+				if taint.Effect != "NoExecute" {
+					taints = append(taints, taint)
+				}
+			}
+		}
+		if len(taints) > 0 {
+			values["controlPlaneTaints"] = taints
+		}
+	}
 
 	if clusterSpec.Spec.RegistryMirrorConfiguration != nil {
 		values["registryMirrorConfiguration"] = clusterSpec.Spec.RegistryMirrorConfiguration.Endpoint
@@ -1575,4 +1590,9 @@ func (p *vsphereProvider) ChangeDiff(currentSpec, newSpec *cluster.Spec) *types.
 		NewVersion:    newSpec.VersionsBundle.VSphere.Version,
 		OldVersion:    currentSpec.VersionsBundle.VSphere.Version,
 	}
+}
+
+func (p *vsphereProvider) ApplyCloudControllerTolerations(ctx context.Context, clusterSpec *cluster.Spec, cluster *types.Cluster) error {
+	logger.V(3).Info("Patch cloud controller manager with tolerations if specified")
+	return p.providerKubectlClient.PatchTolerations(ctx, clusterSpec.Cluster.Spec.ControlPlaneConfiguration.Taints, "ds", "vsphere-cloud-controller-manager", cluster.KubeconfigFile, "kube-system")
 }

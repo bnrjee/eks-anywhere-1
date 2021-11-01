@@ -28,6 +28,7 @@ import (
 	"github.com/aws/eks-anywhere/pkg/cluster"
 	"github.com/aws/eks-anywhere/pkg/constants"
 	"github.com/aws/eks-anywhere/pkg/executables"
+	"github.com/aws/eks-anywhere/pkg/features"
 	"github.com/aws/eks-anywhere/pkg/providers/vsphere/mocks"
 	"github.com/aws/eks-anywhere/pkg/types"
 	releasev1alpha1 "github.com/aws/eks-anywhere/release/api/v1alpha1"
@@ -218,6 +219,7 @@ func (tctx *testContext) SaveContext() {
 	os.Setenv(vSpherePasswordKey, os.Getenv(eksavSpherePasswordKey))
 	os.Setenv(vSphereServerKey, expectedVSphereServer)
 	os.Setenv(expClusterResourceSetKey, expectedExpClusterResourceSet)
+	os.Setenv(features.TaintsSupportEnvVar, "true")
 }
 
 func (tctx *testContext) RestoreContext() {
@@ -396,6 +398,12 @@ func TestProviderGenerateCAPISpecForUpgradeUpdateMachineTemplateExternalEtcd(t *
 			testName:          "main",
 			clusterconfigFile: testClusterConfigMainFilename,
 			wantCPFile:        "testdata/expected_results_main_cp.yaml",
+			wantMDFile:        "testdata/expected_results_main_md.yaml",
+		},
+		{
+			testName:          "main_with_taints",
+			clusterconfigFile: "cluster_main_with_taints.yaml",
+			wantCPFile:        "testdata/expected_results_main_with_taints_cp.yaml",
 			wantMDFile:        "testdata/expected_results_main_md.yaml",
 		},
 	}

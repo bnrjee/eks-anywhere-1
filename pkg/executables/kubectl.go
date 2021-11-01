@@ -825,3 +825,25 @@ func (k *Kubectl) GetBundles(ctx context.Context, kubeconfigFile, name, namespac
 
 	return response, nil
 }
+
+func (k *Kubectl) PatchTolerations(ctx context.Context, taints []corev1.Taint, resource string, name string, kubeconfigFile string, namespace string) error {
+	if len(taints) > 0 {
+		var tolerations []string
+		format := "{\"op\": \"add\", \"path\": \"/spec/template/spec/tolerations/-\", \"value\":{\"key\":\"%s\",\"operator\":\"Equal\",\"%s\":\"val3\",\"effect\":\"%s\"}}"
+		for _, taint := range taints {
+			if taint.Effect != "NoExecute" {
+				tolerations = append(tolerations, fmt.Sprintf(format, taint.Key, taint.Value, taint.Effect))
+			}
+		}
+		if len(tolerations) > 0 {
+			params := []string {"patch", resource, name,
+				"--type=json", fmt.Sprintf("-p='[%v]'", tolerations), "-n", namespace, "--kubeconfig", kubeconfigFile}
+			fmt.Printf("params:%v\n", params)
+			_, err := k.executable.Execute(ctx, params...)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
