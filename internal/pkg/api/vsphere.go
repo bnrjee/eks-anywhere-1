@@ -32,8 +32,10 @@ func AutoFillVSphereProvider(filename string, fillers ...VSphereFiller) ([]byte,
 	if len(clusterConfig.Spec.WorkerNodeGroupConfigurations) == 0 {
 		return nil, fmt.Errorf("no worker nodes defined")
 	}
-	if clusterConfig.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef == nil {
-		return nil, fmt.Errorf("no machineGroupRef defined for worker nodes")
+	for _, workerNodeGroupConfiguration := range clusterConfig.Spec.WorkerNodeGroupConfigurations[0] {
+		if workerNodeGroupConfiguration.MachineGroupRef == nil {
+			return nil, fmt.Errorf("no machineGroupRef defined for worker nodes")
+		}
 	}
 	if clusterConfig.Spec.ExternalEtcdConfiguration != nil {
 		if clusterConfig.Spec.ExternalEtcdConfiguration.MachineGroupRef == nil {

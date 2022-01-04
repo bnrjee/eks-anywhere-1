@@ -102,8 +102,12 @@ func (v *validator) validateCluster(ctx context.Context, vsphereClusterSpec *spe
 	if len(controlPlaneMachineConfig.Spec.ResourcePool) <= 0 {
 		return errors.New("VSphereMachineConfig VM resourcePool for control plane is not set or is empty")
 	}
-	if vsphereClusterSpec.Cluster.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef == nil {
-		return errors.New("must specify machineGroupRef for worker nodes")
+	for _, workerNodeGroupConfiguration := range vsphereClusterSpec.cluster.Spec.WorkerNodeGroupConfigurations {
+		for _, machineGroupRef := range workerNodeGroupConfigurations.MachineGroupRef {
+			if machineGroupRef == nil {
+				return errors.New("must specify machineGroupRef for worker nodes")
+			}
+		}
 	}
 
 	workerNodeGroupMachineConfig := vsphereClusterSpec.firstWorkerMachineConfig()
@@ -294,14 +298,16 @@ func (v *validator) validateDatastoreUsage(ctx context.Context, clusterSpec *clu
 		availableSpace: controlPlaneAvailableSpace,
 		needGiBSpace:   controlPlaneNeedGiB,
 	}
-	workerNeedGiB := workerNodeGroupMachineConfig.Spec.DiskGiB * clusterSpec.Spec.WorkerNodeGroupConfigurations[0].Count
-	_, ok := usage[workerNodeGroupMachineConfig.Spec.Datastore]
-	if ok {
-		usage[workerNodeGroupMachineConfig.Spec.Datastore].needGiBSpace += workerNeedGiB
-	} else {
-		usage[workerNodeGroupMachineConfig.Spec.Datastore] = &datastoreUsage{
-			availableSpace: workerAvailableSpace,
-			needGiBSpace:   workerNeedGiB,
+	for _, workerNodeGroupConfiguration := range clusterSpec.Spec.WorkerNodeGroupConfigurations {
+		workerNeedGiB := workerNodeGroupMachineConfig.Spec.DiskGiB * workerNodeGroupConfiguration.Count
+		_, ok := usage[workerNodeGroupMachineConfig.Spec.Datastore]
+		if ok {
+			usage[workerNodeGroupMachineConfig.Spec.Datastore].needGiBSpace += workerNeedGiB
+		} else {
+			usage[workerNodeGroupMachineConfig.Spec.Datastore] = &datastoreUsage{
+				availableSpace: workerAvailableSpace,
+				needGiBSpace:   workerNeedGiB,
+			}
 		}
 	}
 

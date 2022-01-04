@@ -95,13 +95,13 @@ func WithDatacenterRef(ref ProviderRefAccessor) ClusterGenerateOpt {
 	}
 }
 
-func WithSharedMachineGroupRef(ref ProviderRefAccessor) ClusterGenerateOpt {
+func WithSharedMachineGroupRef(ref ProviderRefAccessor, int index) ClusterGenerateOpt {
 	return func(c *ClusterGenerate) {
 		c.Spec.ControlPlaneConfiguration.MachineGroupRef = &Ref{
 			Kind: ref.Kind(),
 			Name: ref.Name(),
 		}
-		c.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef = &Ref{
+		c.Spec.WorkerNodeGroupConfigurations[index].MachineGroupRef = &Ref{
 			Kind: ref.Kind(),
 			Name: ref.Name(),
 		}
@@ -117,9 +117,9 @@ func WithCPMachineGroupRef(ref ProviderRefAccessor) ClusterGenerateOpt {
 	}
 }
 
-func WithWorkerMachineGroupRef(ref ProviderRefAccessor) ClusterGenerateOpt {
+func WithWorkerMachineGroupRef(ref ProviderRefAccessor, int index) ClusterGenerateOpt {
 	return func(c *ClusterGenerate) {
-		c.Spec.WorkerNodeGroupConfigurations[0].MachineGroupRef = &Ref{
+		c.Spec.WorkerNodeGroupConfigurations[index].MachineGroupRef = &Ref{
 			Kind: ref.Kind(),
 			Name: ref.Name(),
 		}
@@ -311,9 +311,6 @@ func validateControlPlaneReplicas(clusterConfig *Cluster) error {
 func validateWorkerNodeGroups(clusterConfig *Cluster) error {
 	if len(clusterConfig.Spec.WorkerNodeGroupConfigurations) <= 0 {
 		return errors.New("worker node group must be specified")
-	}
-	if len(clusterConfig.Spec.WorkerNodeGroupConfigurations) > 1 {
-		return errors.New("only one worker node group is supported at this time")
 	}
 	return nil
 }
